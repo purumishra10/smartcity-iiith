@@ -1,0 +1,91 @@
+{
+  "score_mae": 5.817,
+  "score_rmse": 7.465,
+  "issues": {
+    "blur": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 32,
+        "fp": 0,
+        "fn": 0,
+        "tn": 128
+      }
+    },
+    "underexposure": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 16,
+        "fp": 0,
+        "fn": 0,
+        "tn": 144
+      }
+    },
+    "overexposure": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 16,
+        "fp": 0,
+        "fn": 0,
+        "tn": 144
+      }
+    },
+    "noise": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 16,
+        "fp": 0,
+        "fn": 0,
+        "tn": 144
+      }
+    },
+    "corruption": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 32,
+        "fp": 0,
+        "fn": 0,
+        "tn": 128
+      }
+    },
+    "defect": {
+      "precision": 0.8824,
+      "recall": 0.9375,
+      "f1": 0.9091,
+      "confusion": {
+        "tp": 30,
+        "fp": 4,
+        "fn": 2,
+        "tn": 124
+      }
+    }
+  },
+  "holdout": {
+    "n": 160,
+    "protocol": "Unseen RNG seed and stronger degradation ranges than train."
+  },
+  "feature_names": [
+    "sharpness_laplacian",
+    "sharpness_tenengrad",
+    "brightness_mean",
+    "dark_frac",
+    "bright_frac",
+    "contrast_std",
+    "saturation_mean",
+    "noise_mad",
+    "entropy",
+    "jpeg_blockiness",
+    "median_residual",
+    "defect_peak",
+    "defect_frac"
+  ]
+}
