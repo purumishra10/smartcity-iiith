@@ -1,0 +1,107 @@
+:root {
+  --bg: #0e1418;
+  --panel: #172026;
+  --panel-2: #1d2a31;
+  --line: #2c3d46;
+  --text: #e8eef1;
+  --muted: #93a4ad;
+  --accent: #3dba9a;
+  --warn: #e0a14a;
+  --bad: #e05a4a;
+  --ok: #5ecf8a;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; }
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(1200px 600px at 10% -10%, #1a2c33, var(--bg));
+  color: var(--text);
+}
+a { color: inherit; text-decoration: none; }
+.shell { max-width: 1180px; margin: 0 auto; padding: 20px 18px 48px; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; margin-bottom: 28px;
+}
+.brand { display: flex; gap: 12px; align-items: center; }
+.brand em { display: block; font-style: normal; color: var(--muted); font-size: 12px; }
+.mark {
+  width: 42px; height: 42px; display: grid; place-items: center;
+  background: var(--accent); color: #06251c; font-weight: 800; border-radius: 8px;
+}
+nav { display: flex; gap: 8px; }
+nav a {
+  padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted);
+}
+nav a.active { color: var(--text); border-color: var(--accent); }
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+}
+h1 { margin: 0 0 8px; font-size: 28px; }
+.lede { color: var(--muted); margin: 0 0 20px; }
+.drop {
+  border: 1.5px dashed var(--line); border-radius: 12px; padding: 36px 16px;
+  text-align: center; background: var(--panel-2); cursor: pointer;
+}
+.drop.hot { border-color: var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.chip {
+  border: 1px solid var(--line); background: transparent; color: var(--muted);
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+}
+.chip.on { color: var(--text); border-color: var(--accent); }
+.btn {
+  background: var(--accent); color: #06251c; border: 0; font-weight: 700;
+  padding: 10px 16px; border-radius: 8px; cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: wait; }
+.err {
+  background: #3a1c1c; border: 1px solid var(--bad); color: #ffd4ce;
+  padding: 10px 12px; border-radius: 8px; margin-top: 12px;
+}
+.exam {
+  display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px;
+}
+@media (max-width: 900px) { .exam { grid-template-columns: 1fr; } }
+.stage { position: relative; background: #0a0f12; border-radius: 12px; overflow: hidden; }
+.stage img.base { width: 100%; display: block; }
+.stage img.overlay {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; object-fit: fill;
+}
+.grid-hit {
+  position: absolute; inset: 0; cursor: crosshair;
+}
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.scoreline { display: flex; align-items: baseline; gap: 12px; }
+.score { font-size: 42px; font-weight: 800; }
+.badge {
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+}
+.badge.ACCEPTABLE { background: #1b3d2c; color: var(--ok); }
+.badge.DEGRADED { background: #3d3018; color: var(--warn); }
+.badge.DEFECTIVE { background: #3d1b18; color: var(--bad); }
+.issues { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.issue {
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  font-size: 13px; cursor: pointer;
+}
+.issue.on { border-color: var(--accent); }
+.vitals { display: grid; gap: 8px; }
+.vital { display: grid; grid-template-columns: 110px 1fr 48px; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.bar { height: 8px; background: #0f171b; border-radius: 99px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.local {
+  margin-top: 12px; font-size: 13px; color: var(--muted);
+  background: var(--panel-2); padding: 10px; border-radius: 8px;
+}
+.history { display: grid; gap: 10px; }
+.visit {
+  display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px;
+}
+.visit img { width: 96px; height: 72px; object-fit: cover; border-radius: 8px; background: #000; }
+.muted { color: var(--muted); font-size: 13px; }
+.busy { color: var(--muted); padding: 24px 0; }
