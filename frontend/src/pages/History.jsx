@@ -24,7 +24,7 @@ export default function History() {
 
       {!rows.length ? (
         <p className="muted">
-          Nothing here yet. <Link to="/">Upload a still</Link> to run your first exam.
+          Nothing here yet. <Link to="/intake">Upload a still</Link> to run your first exam.
         </p>
       ) : (
         <div className="history">

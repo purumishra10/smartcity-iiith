@@ -136,7 +136,7 @@ export default function Exam() {
         </div>
 
         <p className="muted" style={{ marginTop: 16 }}>
-          <Link to="/">Run another exam</Link>
+          <Link to="/intake">Run another exam</Link>
           {" · "}
           <Link to="/history">View past exams</Link>
         </p>
