@@ -13,28 +13,36 @@ export default function History() {
   }, []);
 
   if (error) return <div className="err">{error}</div>;
-  if (!rows) return <p className="busy">Loading chart…</p>;
-  if (!rows.length) return <p className="muted">No visits yet. Run an intake exam first.</p>;
+  if (!rows) return <p className="busy">Loading past exams…</p>;
 
   return (
-    <section>
-      <h1>Chart</h1>
-      <p className="lede">Previous clinic visits, newest first.</p>
-      <div className="history">
-        {rows.map((row) => (
-          <Link key={row.id} className="visit" to={`/exam/${row.id}`}>
-            <img src={assetUrl(row.thumbnail_url)} alt="" />
-            <div>
-              <strong>{row.quality_label}</strong>
-              <div className="muted">
-                Score {row.quality_score}
-                {row.context ? ` · ${row.context}` : ""}
+    <section className="page-card">
+      <header className="page-head">
+        <h1>Past exams</h1>
+        <p className="lede">Previously reviewed stills, most recent first.</p>
+      </header>
+
+      {!rows.length ? (
+        <p className="muted">
+          Nothing here yet. <Link to="/">Upload a still</Link> to run your first exam.
+        </p>
+      ) : (
+        <div className="history">
+          {rows.map((row) => (
+            <Link key={row.id} className="visit" to={`/exam/${row.id}`}>
+              <img src={assetUrl(row.thumbnail_url)} alt="" />
+              <div>
+                <strong>{row.quality_label}</strong>
+                <div className="muted">
+                  Score {row.quality_score}
+                  {row.context ? ` · ${row.context}` : ""}
+                </div>
               </div>
-            </div>
-            <span className="muted">{new Date(row.created_at).toLocaleString()}</span>
-          </Link>
-        ))}
-      </div>
+              <span className="muted">{new Date(row.created_at).toLocaleString()}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

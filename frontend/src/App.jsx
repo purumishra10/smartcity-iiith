@@ -8,17 +8,17 @@ export default function App() {
     <div className="shell">
       <header className="topbar">
         <Link to="/" className="brand">
-          <span className="mark">CQ</span>
+          <span className="mark">IQ</span>
           <span>
-            <strong>Civic Quality Clinic</strong>
-            <em>Operator still inspection</em>
+            <strong>Image Quality Clinic</strong>
+            <em>Civic still review · local inference</em>
           </span>
         </Link>
         <nav>
           <NavLink to="/" end>
-            Intake
+            New exam
           </NavLink>
-          <NavLink to="/history">Chart</NavLink>
+          <NavLink to="/history">Past exams</NavLink>
         </nav>
       </header>
       <main>
