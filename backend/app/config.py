@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     grid_size: int = 16
     max_analysis_dim: int = 512
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080"
+    jwt_secret: str = "dev-change-me-clinic-jwt"
+    jwt_expire_hours: int = 72
+    guest_cookie: str = "clinic_guest"
+    auth_cookie: str = "clinic_token"
 
 
 settings = Settings()
