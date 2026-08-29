@@ -399,6 +399,76 @@ def all_issue_heads(issue_probs: dict[str, float]) -> list[dict]:
     return rows
 
 
+def _region_name(row: int, col: int, rows: int, cols: int) -> str:
+    vert = "the top" if row < rows / 3 else "the bottom" if row >= 2 * rows / 3 else "the middle"
+    horiz = "left" if col < cols / 3 else "right" if col >= 2 * cols / 3 else "centre"
+    if vert == "the middle" and horiz == "centre":
+        return "the centre of the frame"
+    if horiz == "centre":
+        return f"{vert} of the frame"
+    return f"{vert} {horiz}"
+
+
+def _hotspot(maps: dict | None, key: str) -> str | None:
+    if not maps or key not in maps:
+        return None
+    arr = np.asarray(maps[key])
+    if arr.size == 0 or float(arr.max()) < 0.28:
+        return None
+    r, c = np.unravel_index(int(arr.argmax()), arr.shape)
+    return _region_name(int(r), int(c), arr.shape[0], arr.shape[1])
+
+
+def frame_description(
+    score: float,
+    label: str,
+    issues: list[dict],
+    stats: dict,
+    maps: dict | None,
+    context: str | None,
+    bgr=None,
+) -> dict:
+    if issues:
+        names = ", ".join(i["type"].replace("_", " ") for i in issues[:3])
+        quality = (
+            f"Quality note: score {score:.1f} ({label}). Main listed issues: {names}."
+        )
+    else:
+        quality = f"Quality note: score {score:.1f} ({label}). No issue cleared the confidence gate."
+
+    if bgr is not None:
+        from app.vision.scene import describe_scene
+
+        try:
+            scene = describe_scene(bgr, context)
+        except Exception:
+            scene = {
+                "full": "The still could not be described automatically. Inspect the photo on the left.",
+                "people": 0,
+                "vehicles": 0,
+            }
+        return {
+            "appearance": scene["full"],
+            "maps": "",
+            "usefulness": quality,
+            "full": f"{scene['full']} {quality}",
+            "people": scene.get("people", 0),
+            "vehicles": scene.get("vehicles", 0),
+        }
+
+    source = {
+        "street": "a street still",
+        "camera": "a CCTV grab",
+        "other": "an uploaded still",
+    }.get((context or "").lower(), "an uploaded still")
+    return {
+        "appearance": f"This looks like {source}. A full object readout needs the original pixels.",
+        "maps": "",
+        "usefulness": quality,
+        "full": quality,
+    }
+
+
 def fuse_report(
     quality_score: float,
     issue_probs: dict[str, float],
@@ -406,6 +476,8 @@ def fuse_report(
     features=None,
     zscores=None,
     maps: dict | None = None,
+    context: str | None = None,
+    bgr=None,
 ) -> dict:
     score = float(max(0.0, min(100.0, quality_score)))
     issues = []
@@ -428,6 +500,9 @@ def fuse_report(
         "quality_label": label,
         "issues": issues,
         "diagnosis": _diagnosis(label, issues, stats),
+        "frame_description": frame_description(
+            score, label, issues, stats, maps, context, bgr=bgr
+        ),
         "statistics": stats,
         "issue_probabilities": {k: round(float(v), 4) for k, v in issue_probs.items()},
         "issue_heads": heads,
