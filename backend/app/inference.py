@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from app.vision.cnn_input import bgr_to_cnn_tensor
 from app.vision.features import FEATURE_NAMES, ISSUE_TYPES
-from app.vision.model import QualityMLP
+from app.vision.model import QualityHybrid, QualityMLP
 
 
 class StandardScaler:
@@ -17,9 +18,6 @@ class StandardScaler:
 
     def transform(self, x: np.ndarray) -> np.ndarray:
         return (x - self.mean) / self.std
-
-    def to_json(self) -> dict:
-        return {"mean": self.mean.tolist(), "std": self.std.tolist(), "names": FEATURE_NAMES}
 
     @classmethod
     def from_json(cls, path: Path) -> "StandardScaler":
@@ -33,8 +31,9 @@ class QualityEngine:
         self.scaler_path = Path(scaler_path)
         self.ready = False
         self.error: str | None = None
+        self.kind = "hybrid"
         self.device = torch.device("cpu")
-        self.model: QualityMLP | None = None
+        self.model = None
         self.scaler: StandardScaler | None = None
         self.load()
 
@@ -45,23 +44,39 @@ class QualityEngine:
                 self.ready = False
                 return
             self.scaler = StandardScaler.from_json(self.scaler_path)
-            self.model = QualityMLP(in_dim=len(FEATURE_NAMES), n_issues=len(ISSUE_TYPES))
-            state = torch.load(self.model_path, map_location="cpu")
+            in_dim = len(self.scaler.mean)
+            raw = torch.load(self.model_path, map_location="cpu", weights_only=False)
+            if isinstance(raw, dict) and "kind" in raw:
+                self.kind = raw["kind"]
+                state = raw["state"]
+            else:
+                self.kind = "mlp"
+                state = raw
+            if self.kind == "hybrid":
+                self.model = QualityHybrid(in_dim=in_dim, n_issues=len(ISSUE_TYPES))
+            else:
+                self.model = QualityMLP(in_dim=in_dim, n_issues=len(ISSUE_TYPES))
             self.model.load_state_dict(state)
             self.model.eval()
             self.ready = True
             self.error = None
-        except Exception as exc:  # noqa: BLE001 — surface load failure to /health
+        except Exception as exc:  # noqa: BLE001
             self.ready = False
             self.error = str(exc)
 
-    def predict(self, features: np.ndarray) -> tuple[float, dict[str, float]]:
+    def predict(self, features: np.ndarray, bgr=None) -> tuple[float, dict[str, float]]:
         if not self.ready or self.model is None or self.scaler is None:
             raise RuntimeError("model_not_loaded")
         x = self.scaler.transform(features.reshape(1, -1))
         xt = torch.from_numpy(x).to(self.device)
         with torch.no_grad():
-            score, issues = self.model(xt)
+            if self.kind == "hybrid":
+                if bgr is None:
+                    raise RuntimeError("hybrid_requires_image")
+                img = bgr_to_cnn_tensor(bgr).unsqueeze(0)
+                score, issues = self.model(xt, img)
+            else:
+                score, issues = self.model(xt)
         score_v = float(score.cpu().numpy().ravel()[0])
         probs = issues.cpu().numpy().ravel()
         return score_v, {name: float(probs[i]) for i, name in enumerate(ISSUE_TYPES)}

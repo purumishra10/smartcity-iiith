@@ -13,7 +13,7 @@ COPY backend /app/backend
 COPY ml/artifacts /app/ml/artifacts
 
 ENV PYTHONPATH=/app/backend
-ENV DATABASE_URL=sqlite:////data/clinic.db
+ENV DATABASE_URL=postgresql+psycopg2://clinic:clinic@postgres:5432/clinic
 ENV STORAGE_DIR=/data/storage
 ENV MODEL_PATH=/app/ml/artifacts/model.pt
 ENV SCALER_PATH=/app/ml/artifacts/scaler.json
