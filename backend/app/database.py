@@ -10,6 +10,15 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
 
@@ -22,10 +31,28 @@ class Analysis(Base):
     thumbnail_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload_json: Mapped[str] = mapped_column(Text)
     file_size: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    guest_session_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
 
-engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
+def _engine_kwargs(url: str) -> dict:
+    if url.startswith("sqlite"):
+        return {"connect_args": {"check_same_thread": False}}
+    return {"pool_pre_ping": True}
+
+
+engine = create_engine(settings.database_url, **_engine_kwargs(settings.database_url))
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+
+def _sqlite_add_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(analyses)").fetchall()}
+        if cols and "user_id" not in cols:
+            conn.exec_driver_sql("ALTER TABLE analyses ADD COLUMN user_id VARCHAR(36)")
+            conn.exec_driver_sql("ALTER TABLE analyses ADD COLUMN guest_session_id VARCHAR(36)")
 
 
 def init_db() -> None:
@@ -36,3 +63,4 @@ def init_db() -> None:
         db_path = Path(db_url.replace("sqlite:///", "", 1))
         db_path.parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _sqlite_add_columns()
