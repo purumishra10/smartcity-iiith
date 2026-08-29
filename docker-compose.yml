@@ -1,4 +1,18 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic
+      POSTGRES_DB: clinic
+    volumes:
+      - clinic_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
   backend:
     build:
       context: .
@@ -6,13 +20,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: sqlite:////data/clinic.db
+      DATABASE_URL: postgresql+psycopg2://clinic:clinic@postgres:5432/clinic
       STORAGE_DIR: /data/storage
       MODEL_PATH: /app/ml/artifacts/model.pt
       SCALER_PATH: /app/ml/artifacts/scaler.json
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     volumes:
-      - clinic_data:/data
+      - clinic_files:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 15s
@@ -29,4 +47,5 @@ services:
         condition: service_healthy
 
 volumes:
-  clinic_data:
+  clinic_pg:
+  clinic_files:
