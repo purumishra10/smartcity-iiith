@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
@@ -35,12 +36,20 @@ class Analysis(Base):
     guest_session_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
 
+def _ensure_sqlite_dir(url: str) -> None:
+    if url.startswith("sqlite:///") and not url.startswith("sqlite:///:memory:"):
+        db_path = Path(url.replace("sqlite:///", "", 1))
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+
 def _engine_kwargs(url: str) -> dict:
     if url.startswith("sqlite"):
         return {"connect_args": {"check_same_thread": False}}
     return {"pool_pre_ping": True}
 
 
+_ensure_sqlite_dir(settings.database_url)
 engine = create_engine(settings.database_url, **_engine_kwargs(settings.database_url))
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
@@ -56,11 +65,7 @@ def _sqlite_add_columns() -> None:
 
 
 def init_db() -> None:
-    from pathlib import Path
-
-    db_url = settings.database_url
-    if db_url.startswith("sqlite:///"):
-        db_path = Path(db_url.replace("sqlite:///", "", 1))
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_sqlite_dir(settings.database_url)
     Base.metadata.create_all(bind=engine)
     _sqlite_add_columns()
+
