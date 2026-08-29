@@ -1,77 +1,79 @@
 {
-  "score_mae": 5.817,
-  "score_rmse": 7.465,
+  "score_mae": 7.384,
+  "score_rmse": 11.247,
   "issues": {
     "blur": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "precision": 0.9485,
+      "recall": 0.9149,
+      "f1": 0.9314,
       "confusion": {
-        "tp": 32,
-        "fp": 0,
-        "fn": 0,
-        "tn": 128
+        "tp": 129,
+        "fp": 7,
+        "fn": 12,
+        "tn": 252
       }
     },
     "underexposure": {
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "recall": 0.8194,
+      "f1": 0.9008,
       "confusion": {
-        "tp": 16,
+        "tp": 59,
         "fp": 0,
-        "fn": 0,
-        "tn": 144
+        "fn": 13,
+        "tn": 328
       }
     },
     "overexposure": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "precision": 0.9318,
+      "recall": 0.9318,
+      "f1": 0.9318,
       "confusion": {
-        "tp": 16,
-        "fp": 0,
-        "fn": 0,
-        "tn": 144
+        "tp": 41,
+        "fp": 3,
+        "fn": 3,
+        "tn": 353
       }
     },
     "noise": {
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "recall": 0.9386,
+      "f1": 0.9683,
       "confusion": {
-        "tp": 16,
+        "tp": 107,
         "fp": 0,
-        "fn": 0,
-        "tn": 144
+        "fn": 7,
+        "tn": 286
       }
     },
     "corruption": {
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "recall": 0.8974,
+      "f1": 0.9459,
       "confusion": {
-        "tp": 32,
+        "tp": 35,
         "fp": 0,
-        "fn": 0,
-        "tn": 128
+        "fn": 4,
+        "tn": 361
       }
     },
     "defect": {
-      "precision": 0.8824,
-      "recall": 0.9375,
-      "f1": 0.9091,
+      "precision": 1.0,
+      "recall": 0.7674,
+      "f1": 0.8684,
       "confusion": {
-        "tp": 30,
-        "fp": 4,
-        "fn": 2,
-        "tn": 124
+        "tp": 33,
+        "fp": 0,
+        "fn": 10,
+        "tn": 357
       }
     }
   },
   "holdout": {
-    "n": 160,
-    "protocol": "Unseen RNG seed and stronger degradation ranges than train."
+    "n": 400,
+    "protocol": "Unseen RNG seed, stronger degradations, mixed issue pairs, optional Kodak stills.",
+    "public_stills": 8,
+    "train_n": 2000
   },
   "feature_names": [
     "sharpness_laplacian",
@@ -86,6 +88,229 @@
     "jpeg_blockiness",
     "median_residual",
     "defect_peak",
-    "defect_frac"
-  ]
+    "defect_frac",
+    "fft_high_ratio",
+    "mscn_var",
+    "clahe_delta",
+    "color_cast",
+    "glare_peak"
+  ],
+  "ablation": {
+    "fused": {
+      "score_mae": 7.384,
+      "score_rmse": 11.247,
+      "issues": {
+        "blur": {
+          "precision": 0.9485,
+          "recall": 0.9149,
+          "f1": 0.9314,
+          "confusion": {
+            "tp": 129,
+            "fp": 7,
+            "fn": 12,
+            "tn": 252
+          }
+        },
+        "underexposure": {
+          "precision": 1.0,
+          "recall": 0.8194,
+          "f1": 0.9008,
+          "confusion": {
+            "tp": 59,
+            "fp": 0,
+            "fn": 13,
+            "tn": 328
+          }
+        },
+        "overexposure": {
+          "precision": 0.9318,
+          "recall": 0.9318,
+          "f1": 0.9318,
+          "confusion": {
+            "tp": 41,
+            "fp": 3,
+            "fn": 3,
+            "tn": 353
+          }
+        },
+        "noise": {
+          "precision": 1.0,
+          "recall": 0.9386,
+          "f1": 0.9683,
+          "confusion": {
+            "tp": 107,
+            "fp": 0,
+            "fn": 7,
+            "tn": 286
+          }
+        },
+        "corruption": {
+          "precision": 1.0,
+          "recall": 0.8974,
+          "f1": 0.9459,
+          "confusion": {
+            "tp": 35,
+            "fp": 0,
+            "fn": 4,
+            "tn": 361
+          }
+        },
+        "defect": {
+          "precision": 1.0,
+          "recall": 0.7674,
+          "f1": 0.8684,
+          "confusion": {
+            "tp": 33,
+            "fp": 0,
+            "fn": 10,
+            "tn": 357
+          }
+        }
+      }
+    },
+    "mlp_features_only": {
+      "score_mae": 10.502,
+      "score_rmse": 14.244,
+      "issues": {
+        "blur": {
+          "precision": 0.9111,
+          "recall": 0.8723,
+          "f1": 0.8913,
+          "confusion": {
+            "tp": 123,
+            "fp": 12,
+            "fn": 18,
+            "tn": 247
+          }
+        },
+        "underexposure": {
+          "precision": 1.0,
+          "recall": 0.7361,
+          "f1": 0.848,
+          "confusion": {
+            "tp": 53,
+            "fp": 0,
+            "fn": 19,
+            "tn": 328
+          }
+        },
+        "overexposure": {
+          "precision": 1.0,
+          "recall": 0.8864,
+          "f1": 0.9398,
+          "confusion": {
+            "tp": 39,
+            "fp": 0,
+            "fn": 5,
+            "tn": 356
+          }
+        },
+        "noise": {
+          "precision": 0.9455,
+          "recall": 0.9123,
+          "f1": 0.9286,
+          "confusion": {
+            "tp": 104,
+            "fp": 6,
+            "fn": 10,
+            "tn": 280
+          }
+        },
+        "corruption": {
+          "precision": 0.9714,
+          "recall": 0.8718,
+          "f1": 0.9189,
+          "confusion": {
+            "tp": 34,
+            "fp": 1,
+            "fn": 5,
+            "tn": 360
+          }
+        },
+        "defect": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "confusion": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 43,
+            "tn": 357
+          }
+        }
+      }
+    },
+    "cnn_pixels_only": {
+      "score_mae": 13.205,
+      "score_rmse": 16.097,
+      "issues": {
+        "blur": {
+          "precision": 0.8696,
+          "recall": 0.8511,
+          "f1": 0.8602,
+          "confusion": {
+            "tp": 120,
+            "fp": 18,
+            "fn": 21,
+            "tn": 241
+          }
+        },
+        "underexposure": {
+          "precision": 1.0,
+          "recall": 0.4028,
+          "f1": 0.5743,
+          "confusion": {
+            "tp": 29,
+            "fp": 0,
+            "fn": 43,
+            "tn": 328
+          }
+        },
+        "overexposure": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "confusion": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 44,
+            "tn": 356
+          }
+        },
+        "noise": {
+          "precision": 0.7053,
+          "recall": 0.5877,
+          "f1": 0.6411,
+          "confusion": {
+            "tp": 67,
+            "fp": 28,
+            "fn": 47,
+            "tn": 258
+          }
+        },
+        "corruption": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "confusion": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 39,
+            "tn": 361
+          }
+        },
+        "defect": {
+          "precision": 1.0,
+          "recall": 0.3488,
+          "f1": 0.5172,
+          "confusion": {
+            "tp": 15,
+            "fp": 0,
+            "fn": 28,
+            "tn": 357
+          }
+        }
+      }
+    }
+  }
 }
