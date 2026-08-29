@@ -24,6 +24,7 @@ services:
       STORAGE_DIR: /data/storage
       MODEL_PATH: /app/ml/artifacts/model.pt
       SCALER_PATH: /app/ml/artifacts/scaler.json
+      YOLO_MODEL_PATH: /app/ml/artifacts/yolov8n.pt
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080,http://localhost:5173
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     volumes:

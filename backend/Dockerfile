@@ -17,6 +17,7 @@ ENV DATABASE_URL=postgresql+psycopg2://clinic:clinic@postgres:5432/clinic
 ENV STORAGE_DIR=/data/storage
 ENV MODEL_PATH=/app/ml/artifacts/model.pt
 ENV SCALER_PATH=/app/ml/artifacts/scaler.json
+ENV YOLO_MODEL_PATH=/app/ml/artifacts/yolov8n.pt
 
 WORKDIR /app/backend
 EXPOSE 8000

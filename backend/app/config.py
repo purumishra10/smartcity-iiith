@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     storage_dir: str = str(ROOT / "data" / "storage")
     model_path: str = str((ROOT / "ml" / "artifacts" / "model.pt").as_posix())
     scaler_path: str = str((ROOT / "ml" / "artifacts" / "scaler.json").as_posix())
+    yolo_model_path: str = str((ROOT / "ml" / "artifacts" / "yolov8n.pt").as_posix())
     max_upload_bytes: int = 10 * 1024 * 1024
     grid_size: int = 16
     max_analysis_dim: int = 512
