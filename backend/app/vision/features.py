@@ -23,6 +23,11 @@ FEATURE_NAMES = [
     "median_residual",
     "defect_peak",
     "defect_frac",
+    "fft_high_ratio",
+    "mscn_var",
+    "clahe_delta",
+    "color_cast",
+    "glare_peak",
 ]
 
 ISSUE_TYPES = [
@@ -141,6 +146,54 @@ def _jpeg_blockiness(gray: np.ndarray) -> float:
     return float(((v_bounds / (v_int + 1e-6)) + (h_bounds / (h_int + 1e-6))) / 2.0)
 
 
+def extra_global_metrics(bgr: np.ndarray) -> dict[str, float]:
+    """Full-image signals (too noisy / too slow to run on every tile)."""
+    gray = _luma(bgr)
+    h, w = gray.shape
+    if h < 16 or w < 16:
+        return {
+            "fft_high_ratio": 0.0,
+            "mscn_var": 0.0,
+            "clahe_delta": 0.0,
+            "color_cast": 0.0,
+            "glare_peak": 0.0,
+        }
+
+    spectrum = np.abs(np.fft.fftshift(np.fft.fft2(gray)))
+    cy, cx = h // 2, w // 2
+    yy, xx = np.ogrid[:h, :w]
+    radius = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
+    rmax = max(min(cy, cx), 1)
+    high = float(spectrum[radius > 0.35 * rmax].mean()) if np.any(radius > 0.35 * rmax) else 0.0
+    low = float(spectrum[radius <= 0.15 * rmax].mean()) if np.any(radius <= 0.15 * rmax) else 1e-6
+    fft_high_ratio = float(np.clip(high / (low + 1e-6), 0.0, 20.0) / 20.0)
+
+    mu = cv2.GaussianBlur(gray, (7, 7), 1.166)
+    sigma = np.sqrt(np.maximum(cv2.GaussianBlur(gray * gray, (7, 7), 1.166) - mu * mu, 0))
+    mscn = (gray - mu) / (sigma + 1.0)
+    mscn_var = float(np.clip(mscn.var() / 8.0, 0.0, 1.0))
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    equalized = clahe.apply(gray.astype(np.uint8)).astype(np.float32)
+    clahe_delta = float(np.mean(np.abs(equalized - gray)) / 255.0)
+
+    channels = bgr.astype(np.float32)
+    means = channels.reshape(-1, 3).mean(axis=0)
+    gray_mean = float(means.mean())
+    color_cast = float(np.max(np.abs(means - gray_mean)) / 255.0)
+
+    sat = _saturation(bgr)
+    glare_peak = float(np.mean((gray > 240) & (sat < 0.18)))
+
+    return {
+        "fft_high_ratio": fft_high_ratio,
+        "mscn_var": mscn_var,
+        "clahe_delta": clahe_delta,
+        "color_cast": color_cast,
+        "glare_peak": glare_peak,
+    }
+
+
 def extract_tile_maps(bgr: np.ndarray, grid_size: int = 16) -> dict:
     h, w = bgr.shape[:2]
     rows, cols = grid_size, grid_size
@@ -214,28 +267,18 @@ def _normalize_map(m: np.ndarray) -> np.ndarray:
 def extract_global_features(bgr: np.ndarray, grid_size: int = 16) -> tuple[np.ndarray, dict, dict]:
     maps = extract_tile_maps(bgr, grid_size=grid_size)
     m = region_metrics(bgr)
+    extra = extra_global_metrics(bgr)
 
     defect_peak = float(maps["defect"].max())
     defect_frac = float(np.mean(maps["defect"] > 0.45))
 
-    vec = np.array(
-        [
-            m["sharpness_laplacian"],
-            m["sharpness_tenengrad"],
-            m["brightness_mean"],
-            m["dark_frac"],
-            m["bright_frac"],
-            m["contrast_std"],
-            m["saturation_mean"],
-            m["noise_mad"],
-            m["entropy"],
-            m["jpeg_blockiness"],
-            m["median_residual"],
-            defect_peak,
-            defect_frac,
-        ],
-        dtype=np.float32,
-    )
+    named = {
+        **m,
+        "defect_peak": defect_peak,
+        "defect_frac": defect_frac,
+        **extra,
+    }
+    vec = np.array([named[k] for k in FEATURE_NAMES], dtype=np.float32)
 
     stats = {
         "sharpness": round(m["sharpness_laplacian"], 4),
@@ -243,5 +286,8 @@ def extract_global_features(bgr: np.ndarray, grid_size: int = 16) -> tuple[np.nd
         "contrast": round(m["contrast_std"], 4),
         "noise_estimate": round(m["noise_mad"], 4),
         "saturation": round(m["saturation_mean"], 4),
+        "blockiness": round(m["jpeg_blockiness"], 4),
+        "glare": round(extra["glare_peak"], 4),
+        "color_cast": round(extra["color_cast"], 4),
     }
     return vec, stats, maps
