@@ -103,6 +103,45 @@ def add_defect(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return out
 
 
+def add_poisson_noise(img: np.ndarray, rng: np.random.Generator, scale: float) -> np.ndarray:
+    x = img.astype(np.float32) / 255.0
+    lam = np.clip(x * scale, 1e-4, None)
+    noisy = rng.poisson(lam).astype(np.float32) / scale
+    return np.clip(noisy * 255.0, 0, 255).astype(np.uint8)
+
+
+def uneven_illumination(img: np.ndarray, rng: np.random.Generator, strong: bool) -> np.ndarray:
+    h, w = img.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    cy = float(rng.uniform(0.2, 0.8) * h)
+    cx = float(rng.uniform(0.2, 0.8) * w)
+    sigma = float(rng.uniform(0.25, 0.55) * max(h, w))
+    falloff = np.exp(-((yy - cy) ** 2 + (xx - cx) ** 2) / (2 * sigma**2))
+    gain = 0.35 if strong else 0.55
+    shade = (gain + (1.0 - gain) * falloff)[:, :, None]
+    return np.clip(img.astype(np.float32) * shade, 0, 255).astype(np.uint8)
+
+
+def rain_speckle(img: np.ndarray, rng: np.random.Generator, strong: bool) -> np.ndarray:
+    out = img.copy()
+    h, w = out.shape[:2]
+    n = int(rng.integers(80 if not strong else 140, 220 if strong else 160))
+    for _ in range(n):
+        x = int(rng.integers(0, w))
+        y = int(rng.integers(0, h))
+        length = int(rng.integers(6, 18))
+        cv2.line(out, (x, y), (min(w - 1, x + 2), min(h - 1, y + length)), (210, 210, 220), 1)
+    out = cv2.GaussianBlur(out, (3, 3), 0)
+    return add_gaussian_noise(out, 8 if not strong else 14, rng)
+
+
+def add_fog(img: np.ndarray, rng: np.random.Generator, strong: bool) -> np.ndarray:
+    beta = float(rng.uniform(0.55, 0.78 if strong else 0.68))
+    haze = np.array([210, 205, 200], dtype=np.float32)
+    blended = img.astype(np.float32) * (1.0 - beta) + haze * beta
+    return np.clip(blended, 0, 255).astype(np.uint8)
+
+
 def apply_named(img: np.ndarray, name: str, rng: np.random.Generator, strength: str = "train") -> np.ndarray:
     strong = strength == "holdout"
     if name == "clean":
@@ -117,10 +156,18 @@ def apply_named(img: np.ndarray, name: str, rng: np.random.Generator, strength: 
         return adjust_brightness(img, float(rng.uniform(90 if not strong else 110, 160)))
     if name == "noise":
         return add_gaussian_noise(img, float(rng.uniform(28, 55 if strong else 42)), rng)
+    if name == "poisson":
+        return add_poisson_noise(img, rng, float(rng.uniform(18, 32 if strong else 26)))
     if name == "corrupt":
-        return jpeg_smash(img, int(rng.integers(3, 8 if strong else 12)))
+        return jpeg_smash(img, int(rng.integers(3, 8 if strong else 14)))
     if name == "defect":
         return add_defect(img, rng)
+    if name == "uneven":
+        return uneven_illumination(img, rng, strong)
+    if name == "rain":
+        return rain_speckle(img, rng, strong)
+    if name == "fog":
+        return add_fog(img, rng, strong)
     raise ValueError(name)
 
 
@@ -131,8 +178,12 @@ ISSUE_FROM_DEG = {
     "under": ["underexposure"],
     "over": ["overexposure"],
     "noise": ["noise"],
+    "poisson": ["noise"],
     "corrupt": ["corruption"],
     "defect": ["defect"],
+    "uneven": ["underexposure"],
+    "rain": ["noise"],
+    "fog": ["blur"],
 }
 
 
