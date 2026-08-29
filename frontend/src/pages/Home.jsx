@@ -14,12 +14,12 @@ const STEPS = [
   {
     n: "03",
     title: "A local model decides",
-    text: "A trained neural network, running on this machine, estimates overall quality and the likelihood of six issue types. Nothing is sent to an external AI service.",
+    text: "A hybrid network (classical vitals plus a small CNN) runs on this machine. It estimates overall quality and six issue types. Nothing is sent to an external AI service.",
   },
   {
     n: "04",
     title: "Review the report",
-    text: "You receive a score, a plain-language diagnosis, issue confidence, and heatmaps that show where problems sit on the frame. Every exam is saved for later.",
+    text: "You receive a score, a plain-language diagnosis, issue confidence, and heatmaps that show where problems sit on the frame. Create an account if you want that exam kept in Past exams.",
   },
 ];
 
@@ -40,7 +40,7 @@ export default function Home() {
           <p className="hero-kicker">Civic still inspection</p>
           <h1 className="hero-title">Know if a public-space image is fit to use — before you act on it.</h1>
           <p className="hero-lead">
-            Image Quality Clinic reviews street and camera stills for blur, exposure, noise, corruption, and
+            Dr. Image reviews street and camera stills for blur, exposure, noise, corruption, and
             visual defects. It returns a quality score, a diagnosis, and maps of where the problems are.
             Analysis runs entirely on your infrastructure.
           </p>
@@ -70,8 +70,8 @@ export default function Home() {
             <span>Region heatmaps, not just a single number</span>
           </div>
           <div>
-            <strong>Logged</strong>
-            <span>Every exam stored for operator review</span>
+            <strong>Optional save</strong>
+            <span>Free to run; account required to keep Past exams</span>
           </div>
         </div>
       </section>
@@ -81,7 +81,7 @@ export default function Home() {
           <p className="section-kicker">Process</p>
           <h2>From upload to a decision you can explain</h2>
           <p className="section-lead">
-            The clinic is built for operators who need a defensible quality check — not a black-box score.
+            Dr. Image is built for operators who need a defensible quality check — not a black-box score.
           </p>
           <ol className="step-grid">
             {STEPS.map((s) => (
@@ -120,9 +120,9 @@ export default function Home() {
             <h2>Measurements first. A learned model second. A written verdict last.</h2>
             <p>
               We extract interpretable vitals from the image — sharpness, brightness, contrast, noise, and
-              local residuals. A compact neural network, trained for this task, turns those vitals into a
+              local residuals. A hybrid model (classical features plus a small CNN) turns those signals into a
               0–100 score and issue probabilities. Simple rules then assign ACCEPTABLE, DEGRADED, or
-              DEFECTIVE, and a short diagnosis in plain language.
+              DEFECTIVE, and a written diagnosis in plain language.
             </p>
             <p>
               Heatmaps reuse the same tile-level measurements as the global score, so a highlighted region
@@ -136,7 +136,8 @@ export default function Home() {
               <li>Primary diagnosis</li>
               <li>Issues with severity and confidence</li>
               <li>Blur, exposure, noise, and defect maps</li>
-              <li>A stored record in exam history</li>
+              <li>A downloadable PDF with original + four heatmaps</li>
+              <li>Past exams when you create a free account</li>
             </ul>
           </aside>
         </div>
@@ -145,7 +146,7 @@ export default function Home() {
       <section className="home-cta">
         <div className="home-inner">
           <h2>Ready to inspect a still?</h2>
-          <p>Open intake, upload a frame, and run a local quality exam. Past reports stay on the Past exams page.</p>
+          <p>Open intake and run a local quality exam. Sign up only if you want Past exams saved.</p>
           <Link className="btn" to="/intake">
             Go to intake
           </Link>

@@ -101,18 +101,11 @@ a {
   align-items: flex-start;
 }
 
-.mark {
+.brand-mark {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border-radius: 4px;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset;
 }
 
 .brand strong {
@@ -133,7 +126,10 @@ a {
 
 nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 nav a {
@@ -880,4 +876,138 @@ h1 {
   .split {
     grid-template-columns: 1fr;
   }
+}
+
+.nav-user {
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 0 8px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-text {
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.nav-text:hover {
+  color: var(--ink);
+}
+
+.save-banner {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  max-width: 360px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.explain-block {
+  margin-top: 16px;
+}
+
+.explain {
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.explain summary {
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.vital.vital--deep {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-bottom: 12px;
+  align-items: start;
+}
+
+.vital-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 36px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.vital-why,
+.vital-action,
+.vital-hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.exam-progress {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.exam-progress-label {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.exam-progress-track {
+  height: 10px;
+  border-radius: 99px;
+  background: #fff;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.exam-progress-track span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+
+.ledger-line {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.rule-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--ink-soft);
 }

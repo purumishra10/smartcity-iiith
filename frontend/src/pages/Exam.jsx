@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { assetUrl, getAnalysis } from "../api.js";
+import { assetUrl, getAnalysis, reportUrl } from "../api.js";
+import { useAuth } from "../AuthContext.jsx";
 
 const OVERLAYS = [
   { id: "blur", label: "Blur" },
@@ -18,18 +19,15 @@ const ISSUE_OVERLAY = {
   corruption: null,
 };
 
-function vitalPct(stats, key) {
-  const v = Number(stats?.[key] ?? 0);
-  return Math.max(0, Math.min(100, Math.round(v * 100)));
-}
-
 export default function Exam() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [report, setReport] = useState(null);
   const [error, setError] = useState("");
   const [overlay, setOverlay] = useState("blur");
   const [pickedIssue, setPickedIssue] = useState(null);
   const [local, setLocal] = useState(null);
+  const [busyPdf, setBusyPdf] = useState(false);
 
   useEffect(() => {
     getAnalysis(id)
@@ -60,10 +58,30 @@ export default function Exam() {
     }
   }
 
+  async function downloadPdf() {
+    setBusyPdf(true);
+    try {
+      const res = await fetch(reportUrl(id), { credentials: "include" });
+      if (!res.ok) throw new Error("report_failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dr-image-${id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyPdf(false);
+    }
+  }
+
   if (error) return <div className="err">{error}</div>;
   if (!report) return <p className="busy">Loading exam report…</p>;
 
-  const stats = report.statistics || {};
+  const vitals = report.vital_explanations || [];
+  const issueNotes = report.issue_explanations || [];
 
   return (
     <section className="exam">
@@ -103,6 +121,17 @@ export default function Exam() {
         </div>
         <p className="diagnosis">{report.diagnosis}</p>
 
+        {!user && (
+          <div className="save-banner">
+            This exam is listed under Past exams for this browser session.{" "}
+            <Link to="/signup">Create an account</Link> to keep it after you close the browser.
+          </div>
+        )}
+
+        <button className="btn" type="button" onClick={downloadPdf} disabled={busyPdf}>
+          {busyPdf ? "Preparing report…" : "Download detailed report"}
+        </button>
+
         <div className="issues">
           {(report.issues || []).length === 0 && (
             <span className="muted">No issues above the confidence threshold.</span>
@@ -126,14 +155,67 @@ export default function Exam() {
           ))}
         </div>
 
+        {issueNotes.length > 0 && (
+          <div className="explain-block">
+            <p className="vitals-title">Why these issues</p>
+            {issueNotes.map((note) => (
+              <details key={note.type} className="explain" open={pickedIssue === note.type}>
+                <summary>
+                  {note.type.replace("_", " ")} · {(note.confidence * 100).toFixed(0)}%
+                </summary>
+                <p>{note.why}</p>
+                <p className="muted">{note.evidence}</p>
+                {note.operator_note && <p>{note.operator_note}</p>}
+              </details>
+            ))}
+          </div>
+        )}
+
         <div className="vitals">
           <p className="vitals-title">Measured vitals</p>
-          <Vital label="Sharpness" pct={vitalPct(stats, "sharpness") * 4} raw={stats.sharpness} />
-          <Vital label="Brightness" pct={vitalPct(stats, "brightness")} raw={stats.brightness} />
-          <Vital label="Contrast" pct={vitalPct(stats, "contrast") * 2} raw={stats.contrast} />
-          <Vital label="Noise" pct={vitalPct(stats, "noise_estimate") * 4} raw={stats.noise_estimate} />
-          <Vital label="Saturation" pct={vitalPct(stats, "saturation")} raw={stats.saturation} />
+          {vitals.length
+            ? vitals.map((v) => <Vital key={v.id} item={v} />)
+            : null}
         </div>
+
+        {(report.issue_heads || []).length > 0 && (
+          <div className="explain-block">
+            <p className="vitals-title">All six issue heads</p>
+            {(report.issue_heads || []).map((h) => (
+              <p key={h.type} className="ledger-line">
+                <strong>{h.type.replace("_", " ")}</strong> {(h.confidence * 100).toFixed(1)}%
+                {h.listed ? ` · listed (${h.severity})` : " · below 0.42 gate"}
+                {h.heatmap ? ` · map: ${h.heatmap}` : " · no heatmap (global)"}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {(report.measurements || []).length > 0 && (
+          <div className="explain-block">
+            <p className="vitals-title">Every measurement used</p>
+            {(report.measurements || []).map((m) => (
+              <details key={m.id} className="explain">
+                <summary>
+                  {m.label} · {m.raw} {m.zscore != null ? `(z ${m.zscore})` : ""}
+                </summary>
+                <p>{m.meaning}</p>
+                <p className="muted">Feeds: {m.feeds}</p>
+              </details>
+            ))}
+          </div>
+        )}
+
+        {report.fusion?.rules && (
+          <div className="explain-block">
+            <p className="vitals-title">Fusion rules</p>
+            <ul className="rule-list">
+              {report.fusion.rules.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <p className="muted" style={{ marginTop: 16 }}>
           <Link to="/intake">Run another exam</Link>
@@ -145,14 +227,19 @@ export default function Exam() {
   );
 }
 
-function Vital({ label, pct, raw }) {
+function Vital({ item }) {
   return (
-    <div className="vital">
-      <span>{label}</span>
-      <div className="bar">
-        <span style={{ width: `${Math.max(4, Math.min(100, pct))}%` }} />
+    <div className="vital vital--deep">
+      <div className="vital-row">
+        <span>{item.label}</span>
+        <div className="bar">
+          <span style={{ width: `${Math.max(4, Math.min(100, item.display))}%` }} />
+        </div>
+        <span>{item.display}</span>
       </div>
-      <span>{Number(raw ?? 0).toFixed(2)}</span>
+      <p className="vital-why">{item.why}</p>
+      <p className="muted vital-hint">{item.meaning}</p>
+      <p className="vital-action">{item.action}</p>
     </div>
   );
 }
