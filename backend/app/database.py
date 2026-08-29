@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from app.config import settings
@@ -41,6 +43,14 @@ def _engine_kwargs(url: str) -> dict:
     return {"pool_pre_ping": True}
 
 
+def _ensure_sqlite_parent_dir(url: str) -> None:
+    parsed = make_url(url)
+    if not parsed.drivername.startswith("sqlite") or not parsed.database or parsed.database == ":memory:":
+        return
+    Path(parsed.database).expanduser().parent.mkdir(parents=True, exist_ok=True)
+
+
+_ensure_sqlite_parent_dir(settings.database_url)
 engine = create_engine(settings.database_url, **_engine_kwargs(settings.database_url))
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
@@ -56,11 +66,6 @@ def _sqlite_add_columns() -> None:
 
 
 def init_db() -> None:
-    from pathlib import Path
-
-    db_url = settings.database_url
-    if db_url.startswith("sqlite:///"):
-        db_path = Path(db_url.replace("sqlite:///", "", 1))
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_sqlite_parent_dir(settings.database_url)
     Base.metadata.create_all(bind=engine)
     _sqlite_add_columns()
