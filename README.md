@@ -20,7 +20,7 @@ sample_images/  one example per quality condition
 1. Decode and validate the upload.
 2. Resize a working copy (max 512 px) and extract CV features globally and on a 16×16 tile grid (`backend/app/vision/features.py`). Extra full-image signals (FFT, MSCN, CLAHE residual, colour cast, glare) are concatenated.
 3. Standardize the feature vector with `ml/artifacts/scaler.json` (train-set mean/std only).
-4. `QualityHybrid` (`model.pt`) concatenates a tiny CNN embedding (128×128 RGB) with the CV MLP embedding, then predicts a 0–100 score and six issue probabilities.
+4. `QualityHybrid` (`model.pt`) concatenates a tiny CNN embedding (128×128 RGB) with the CV MLP embedding, then predicts a 0–100 score and six issue probabilities. A local **YOLOv8n** pass (COCO) lists people, cars, buses, bikes, and traffic lights for the left-side scene text.
 5. Fusion rules assign the label, issue list, diagnosis, and structured explanations (`fusion.py`).
 6. Tile maps are upsampled to PNG overlays. Global stats use the same formulas as the tiles so the map cannot invent a problem the score never saw.
 7. The visit is stored (Postgres in Docker, SQLite locally). Files live under `STORAGE_DIR/<id>/`. Guests are keyed by an httpOnly session cookie; logged-in users own the row.
@@ -81,6 +81,7 @@ Copy `.env.example`. Important variables:
 | `DATABASE_URL` | SQLite file URL, or `postgresql+psycopg2://…` |
 | `STORAGE_DIR` | originals + heatmaps |
 | `MODEL_PATH` / `SCALER_PATH` | hybrid artifacts |
+| `YOLO_MODEL_PATH` | YOLOv8n weights for “what's in the frame” (auto-download on first run) |
 | `JWT_SECRET` | signs login cookies |
 | `MAX_UPLOAD_BYTES` | default 10 MB |
 | `GRID_SIZE` | default 16 |
