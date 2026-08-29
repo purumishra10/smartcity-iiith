@@ -28,6 +28,19 @@ export default function Exam() {
   const [pickedIssue, setPickedIssue] = useState(null);
   const [local, setLocal] = useState(null);
   const [busyPdf, setBusyPdf] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    getAnalysis(id)
+      .then(setReport)
+      .catch((e) => setError(e.message));
+  }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     getAnalysis(id)
@@ -58,17 +71,48 @@ export default function Exam() {
     }
   }
 
+  async function loadPdfBlob() {
+    const res = await fetch(reportUrl(id), { credentials: "include" });
+    if (!res.ok) throw new Error("report_failed");
+    return res.blob();
+  }
+
+  async function openPreview() {
+    setBusyPdf(true);
+    setError("");
+    try {
+      const blob = await loadPdfBlob();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusyPdf(false);
+    }
+  }
+
+  function closePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
+  }
+
+  function savePdf(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dr-image-${id.slice(0, 8)}.pdf`;
+    a.click();
+  }
+
   async function downloadPdf() {
+    if (previewUrl) {
+      savePdf(previewUrl);
+      return;
+    }
     setBusyPdf(true);
     try {
-      const res = await fetch(reportUrl(id), { credentials: "include" });
-      if (!res.ok) throw new Error("report_failed");
-      const blob = await res.blob();
+      const blob = await loadPdfBlob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `dr-image-${id.slice(0, 8)}.pdf`;
-      a.click();
+      savePdf(url);
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(e.message);
@@ -82,6 +126,8 @@ export default function Exam() {
 
   const vitals = report.vital_explanations || [];
   const issueNotes = report.issue_explanations || [];
+  const desc = report.frame_description;
+  const descText = desc?.full || desc?.appearance || report.diagnosis;
 
   return (
     <section className="exam">
@@ -111,6 +157,19 @@ export default function Exam() {
             {local.tile.noise.toFixed(2)}, defect {local.tile.defect.toFixed(2)}
           </div>
         )}
+        {descText && (
+          <div className="frame-copy">
+            <p className="vitals-title">What's in the frame</p>
+            {desc?.appearance ? (
+              <>
+                <p>{desc.appearance}</p>
+                {desc.usefulness && <p className="muted">{desc.usefulness}</p>}
+              </>
+            ) : (
+              <p>{descText}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <aside className="panel report-panel">
@@ -128,9 +187,14 @@ export default function Exam() {
           </div>
         )}
 
-        <button className="btn" type="button" onClick={downloadPdf} disabled={busyPdf}>
-          {busyPdf ? "Preparing report…" : "Download detailed report"}
-        </button>
+        <div className="report-actions">
+          <button className="btn-ghost" type="button" onClick={openPreview} disabled={busyPdf}>
+            {busyPdf && !previewUrl ? "Loading preview…" : "Preview report"}
+          </button>
+          <button className="btn" type="button" onClick={downloadPdf} disabled={busyPdf}>
+            Download detailed report
+          </button>
+        </div>
 
         <div className="issues">
           {(report.issues || []).length === 0 && (
@@ -223,6 +287,25 @@ export default function Exam() {
           <Link to="/history">View past exams</Link>
         </p>
       </aside>
+
+      {previewUrl && (
+        <div className="pdf-modal" role="dialog" aria-modal="true" aria-label="Report preview">
+          <div className="pdf-modal-panel">
+            <header className="pdf-modal-head">
+              <h2>Report preview</h2>
+              <div className="pdf-modal-actions">
+                <button className="btn" type="button" onClick={() => savePdf(previewUrl)}>
+                  Download
+                </button>
+                <button className="btn-ghost" type="button" onClick={closePreview}>
+                  Close
+                </button>
+              </div>
+            </header>
+            <iframe className="pdf-frame" title="Dr. Image report preview" src={previewUrl} />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
