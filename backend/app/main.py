@@ -89,6 +89,12 @@ def startup() -> None:
     init_db()
     Path(settings.storage_dir).mkdir(parents=True, exist_ok=True)
     engine_ml.load()
+    try:
+        from app.vision.scene import _load_model
+
+        _load_model()
+    except Exception:
+        log.warning("YOLO scene model not loaded at startup")
 
 
 def _analysis_dir(analysis_id: str) -> Path:
@@ -230,7 +236,16 @@ async def analyze(
     zscores = None
     if engine_ml.scaler is not None:
         zscores = engine_ml.scaler.transform(features.reshape(1, -1)).ravel()
-    report = fuse_report(score, probs, stats, features=features, zscores=zscores, maps=maps)
+    report = fuse_report(
+        score,
+        probs,
+        stats,
+        features=features,
+        zscores=zscores,
+        maps=maps,
+        context=context,
+        bgr=working,
+    )
     save_heatmap_overlays(maps, working.shape, dest / "heatmaps")
 
     thumb = cv2.resize(working, (160, 120), interpolation=cv2.INTER_AREA)

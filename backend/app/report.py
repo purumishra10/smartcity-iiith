@@ -115,6 +115,12 @@ def build_report_pdf(row, payload: dict, original_path: Path, heatmap_dir: Path)
     )
     story.append(Paragraph(payload.get("diagnosis") or "", body))
 
+    desc = payload.get("frame_description") or {}
+    story.append(Paragraph("What's in the frame", h))
+    story.append(Paragraph(desc.get("appearance") or payload.get("diagnosis") or "", body))
+    if desc.get("usefulness"):
+        story.append(Paragraph(desc["usefulness"], small))
+
     intake = payload.get("intake") or {}
     story.append(Paragraph("Intake and file facts", h))
     story.append(
