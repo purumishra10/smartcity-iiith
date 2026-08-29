@@ -1,60 +1,66 @@
 # Dr. Image
 
-Operator tool for civic stills (street, CCTV grab, incident photo). Upload an image; Dr. Image returns a quality score, a label (`ACCEPTABLE` / `DEGRADED` / `DEFECTIVE`), a plain-English diagnosis, **why each vital scored as it did**, per-issue confidence, and **clickable heatmaps** showing where blur, exposure, noise, and defects sit. You can download a **PDF report** with the original still and all four overlays.
+**Dr. Image** is an automated image quality assessment (IQA) and visual diagnostics platform engineered for civic stills (surveillance CCTV, traffic cameras, and field incident captures). It provides comprehensive image health diagnostics: a continuous 0–100 quality score, a tripartite clinical label (`ACCEPTABLE`, `DEGRADED`, `DEFECTIVE`), multi-head degradation probabilities, interpretable vital statistics, and interactive spatial heatmaps isolating blur, exposure defects, noise, and structural artifacts.
 
-No external AI APIs. Inference runs locally on CPU.
-
-**Accounts:** exams are free without logging in. **Past exams** (saved history) requires sign-up. Guest exams from the current browser session are attached to your account when you register or log in.
+All inference runs locally on CPU with zero external API calls, combining classical vision feature extraction, a hybrid CNN+MLP quality estimator, and local YOLOv8 scene detection. Users can inspect heatmaps, preview/download PDF reports, and persist examination history across sessions.
 
 ## Layout
 
 ```text
-backend/     FastAPI, SQLAlchemy, Postgres or SQLite, hybrid CNN+MLP
-frontend/     React (Vite) clinic UI
-ml/           train, synthetic degrade, optional public stills, artifacts/
-sample_images/  one example per quality condition
+backend/        FastAPI backend, SQLAlchemy ORM, SQLite/PostgreSQL, hybrid CNN+MLP engine
+frontend/       React + Vite interactive diagnostic dashboard & report viewer
+ml/             PyTorch training pipeline, degradation transforms, artifacts (model.pt, metrics)
+sample_images/  Curated validation test stills (clean, blur, noise, exposure, defects)
 ```
 
 ## How inference works
 
-1. Decode and validate the upload.
-2. Resize a working copy (max 512 px) and extract CV features globally and on a 16×16 tile grid (`backend/app/vision/features.py`). Extra full-image signals (FFT, MSCN, CLAHE residual, colour cast, glare) are concatenated.
-3. Standardize the feature vector with `ml/artifacts/scaler.json` (train-set mean/std only).
-4. `QualityHybrid` (`model.pt`) concatenates a tiny CNN embedding (128×128 RGB) with the CV MLP embedding, then predicts a 0–100 score and six issue probabilities. A local **YOLOv8n** pass (COCO) lists people, cars, buses, bikes, and traffic lights for the left-side scene text.
-5. Fusion rules assign the label, issue list, diagnosis, and structured explanations (`fusion.py`).
-6. Tile maps are upsampled to PNG overlays. Global stats use the same formulas as the tiles so the map cannot invent a problem the score never saw.
-7. The visit is stored (Postgres in Docker, SQLite locally). Files live under `STORAGE_DIR/<id>/`. Guests are keyed by an httpOnly session cookie; logged-in users own the row.
+1. **Intake & Preprocessing:** Uploaded image is decoded, validated, and normalized to a max dimension of 512 px while preserving aspect ratio.
+2. **Feature Extraction:** Computes global statistical signals (MSCN natural scene statistics, FFT frequency energy, CLAHE residuals, chromatic cast, glare) and local 16×16 spatial grid statistics (`backend/app/vision/features.py`).
+3. **Z-Score Normalization:** Transforms extracted features using precomputed training distribution parameters (`ml/artifacts/scaler.json`).
+4. **Hybrid Neural Estimation:** `QualityHybrid` (`model.pt`) fuses a 128×128 RGB convolutional embedding with the MLP feature projection to predict the overall quality score and 6 degradation heads. A lightweight **YOLOv8n** pass detects civic entities (pedestrians, vehicles, signals) for context grounding.
+5. **Multi-Modal Decision Fusion:** Rule-based heuristics and gating thresholds synthesize the final clinical label, primary diagnosis, and actionable recommendations (`fusion.py`).
+6. **Heatmap Generation:** Grid-level spatial statistics are upsampled to generate pixel-aligned PNG heatmaps for blur, exposure, noise, and defects.
+7. **Persistence:** Analysis records and metadata are persisted to PostgreSQL (Docker) or SQLite (local), associating session visits with guest or authenticated accounts.
 
-## Local setup (no Docker)
+## Quickstart with Docker (Recommended)
 
-Python 3.11+ and Node 20+ recommended.
+Docker Compose starts the containerized PostgreSQL database, FastAPI inference backend, and Nginx-backed React frontend out-of-the-box.
+
+```bash
+docker compose up --build
+```
+
+- **Frontend Dashboard:** http://localhost:8080
+- **FastAPI Backend:** http://localhost:8000
+- **Health Endpoint:** http://localhost:8000/health
+- **Postgres Volume:** `clinic_pg` (stores user accounts and exam history)
+- **Artifacts Volume:** `clinic_files` (mapped to `/data/storage`)
+
+## Local setup (without Docker)
+
+Prerequisites: **Python 3.11+** and **Node.js 20+**.
+
+### 1. Backend Setup
 
 ```bash
 cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate
-# Unix: source .venv/bin/activate
+# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Train (once) from the repo root, with the venv active:
+Start the FastAPI application:
 
 ```bash
-python ml/train.py
-python ml/generate_samples.py
+# From backend/ with venv activated
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-This writes `ml/artifacts/model.pt`, `scaler.json`, `metrics.json`, and `sample_images/`. Training tries a small Kodak download into `ml/data/public/`; if the network is blocked it falls back to procedural streets only.
+*Note: Database defaults to SQLite at `data/clinic.db`. Storage files are written to `data/storage/`.*
 
-API:
-
-```bash
-cd backend
-set PYTHONPATH=.
-uvicorn app.main:app --reload --port 8000
-```
-
-UI:
+### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -62,99 +68,64 @@ npm install
 npm run dev
 ```
 
-If the folder path contains spaces (`Hackathons & Competitions`), `npm run dev` may fail on Windows. From `frontend/` run:
+*If your directory path contains spaces on Windows, run `node node_modules/vite/bin/vite.js` directly.*
+
+Open **http://localhost:5173** (Vite automatically proxies `/api` and `/health` to port 8000).
+
+### 3. ML Retraining (Optional)
+
+Pretrained weights (`model.pt`, `scaler.json`, `yolov8n.pt`) are included in `ml/artifacts/`. To retrain:
 
 ```bash
-node node_modules/vite/bin/vite.js
+python ml/train.py
+python ml/generate_samples.py
 ```
 
-Open http://localhost:5173 (Vite proxies `/api` and `/health` to port 8000 so auth cookies stay on the UI origin).
+## Environment Configuration
 
-Local database defaults to **SQLite** at `smartcity-iiith/data/clinic.db`. Do not delete `data/` if you want history to survive restarts. Uploads: `data/storage/`.
+Configure environment variables via `.env` (refer to `.env.example`):
 
-### Environment
+| Variable | Default / Format | Description |
+|----------|------------------|-------------|
+| `DATABASE_URL` | `sqlite:///.../data/clinic.db` | Database connection string (SQLite or PostgreSQL) |
+| `STORAGE_DIR` | `.../data/storage` | Directory storing uploaded originals and heatmap PNGs |
+| `MODEL_PATH` | `ml/artifacts/model.pt` | Path to PyTorch hybrid quality model weights |
+| `SCALER_PATH` | `ml/artifacts/scaler.json` | Path to feature standard scaler parameters |
+| `YOLO_MODEL_PATH` | `ml/artifacts/yolov8n.pt` | Path to YOLOv8n weights for scene parsing |
+| `JWT_SECRET` | `dev-change-me-clinic-jwt` | Secret key used for signing session auth tokens |
+| `MAX_UPLOAD_BYTES`| `10485760` (10 MB) | Maximum permitted upload payload size |
+| `CORS_ORIGINS` | `http://localhost:5173,...` | Allowed CORS origins for cross-domain requests |
 
-Copy `.env.example`. Important variables:
+## Authentication & Session Model
 
-| Variable | Meaning |
-|----------|---------|
-| `DATABASE_URL` | SQLite file URL, or `postgresql+psycopg2://…` |
-| `STORAGE_DIR` | originals + heatmaps |
-| `MODEL_PATH` / `SCALER_PATH` | hybrid artifacts |
-| `YOLO_MODEL_PATH` | YOLOv8n weights for “what's in the frame” (auto-download on first run) |
-| `JWT_SECRET` | signs login cookies |
-| `MAX_UPLOAD_BYTES` | default 10 MB |
-| `GRID_SIZE` | default 16 |
-| `CORS_ORIGINS` | comma-separated origins |
-| `VITE_API_URL` | leave empty when using the Vite proxy or nginx |
+| Capability | Guest User | Registered User |
+|------------|------------|-----------------|
+| Run instant image analysis | Yes | Yes |
+| Interactive heatmaps & PDF export | Yes | Yes |
+| View past examination history | Session only | Persistent account history |
+| Guest session migration | N/A | Automatically claimed on signup/login |
 
-## Docker Compose
+## REST API Reference
 
-Requires trained artifacts in `ml/artifacts/` first (`python ml/train.py`).
+- `GET /health` — Returns status 200 with engine readiness, 503 if weights unavailable.
+- `POST /api/analyze` — Multipart form upload (`file`, optional `context`: `street` | `camera` | `other`).
+- `GET /api/analyses` — Retrieves paginated examination history for authenticated user.
+- `GET /api/analyses/{id}` — Retrieves full structured JSON diagnostics for an exam.
+- `GET /api/analyses/{id}/image` — Streams the stored original image (`?thumb=1` for thumbnail).
+- `GET /api/analyses/{id}/heatmaps/{kind}` — Streams overlay PNG (`blur`, `exposure`, `noise`, `defect`).
+- `GET /api/analyses/{id}/report.pdf` — Generates and downloads the multi-page clinical PDF report.
+- `POST /api/auth/signup` & `POST /api/auth/login` — Authentication endpoints issuing HTTP-only JWT cookies.
 
-```bash
-docker compose up --build
-```
-
-- UI: http://localhost:8080
-- API: http://localhost:8000
-- Health: http://localhost:8000/health
-- Postgres volume `clinic_pg` (history)
-- File volume `clinic_files` → `/data/storage`
-
-Set `JWT_SECRET` in the environment for anything beyond a laptop demo.
-
-Guest rows that are never claimed by an account remain on disk for the guest cookie lifetime (7 days on the cookie). Orphan cleanup is not automated; operators can wipe volumes.
-
-## Auth behaviour
-
-| Action | Guest | Logged in |
-|--------|-------|-----------|
-| Run exam | yes | yes |
-| Open that exam / PDF (same browser) | yes | yes |
-| Past exams list | empty + CTA | own rows only |
-| After sign-up / log-in | session exams become saved | merged |
-
-## API
-
-`GET /health` — 200 if the model loaded, 503 otherwise.
-
-`POST /api/auth/signup` / `POST /api/auth/login` — JSON `{ "email", "password" }` (password ≥ 8). Sets httpOnly `clinic_token`.
-
-`POST /api/auth/logout`
-
-`GET /api/me`
-
-`POST /api/analyze` — multipart field `file`, optional `context` (`street` | `camera` | `other`). No login required.
-
+Example cURL test:
 ```bash
 curl -F "file=@sample_images/01_blur.jpg" -F "context=street" http://localhost:8000/api/analyze
 ```
 
-The JSON includes `diagnosis`, `vital_explanations`, `issue_explanations`, `heatmaps`, `report_url`, and `saved_to_history`.
-
-`GET /api/analyses` — history for the **logged-in user** only (empty list if guest).
-
-`GET /api/analyses/{id}` — full visit if you own it or hold the guest session.
-
-`GET /api/analyses/{id}/image` — original (`?thumb=1` for thumbnail).
-
-`GET /api/analyses/{id}/heatmaps/{blur\|exposure\|noise\|defect}` — overlay PNG.
-
-`GET /api/analyses/{id}/report.pdf` — detailed PDF (original + four composited heatmaps + write-ups).
-
-Errors: 400 unreadable / wrong type / too large; 401 bad login; 404 unknown or not yours; 409 email taken; 500 unexpected (no stack traces).
-
-## Training recipe
-
-See `EVALUATION.md`.
-
-## Tests
+## Testing & CI
 
 ```bash
 cd backend
-set PYTHONPATH=.
-pytest -q
+python -m pytest -q
 ```
 
-CI (GitHub Actions) runs pytest and `npm run build`.
+Continuous Integration runs on GitHub Actions validating test suites and frontend production bundles.
